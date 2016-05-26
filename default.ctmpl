@@ -1,0 +1,43 @@
+upstream web {
+    least_conn;
+    {{range service "web" }}
+    server {{.Address}}:{{.Port}} max_fails=3 fail_timeout=60 weight=1;{{end}}
+}
+
+server {
+    listen 80 default;
+
+    location / {
+      return 301 https://$host$request_uri;
+      # proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      # proxy_set_header X-Forwarded-Proto https;
+      # proxy_set_header Host $http_host;
+      # proxy_redirect off;
+
+      # if (-f $request_filename) {
+      #   break;
+      # }
+      # proxy_pass http://web;
+    }
+}
+
+
+server {
+  listen 443 ssl;
+
+  ssl_certificate /etc/ssl/bundle.cer;
+  ssl_certificate_key /etc/ssl/private.key;
+
+  location / {
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header Host $http_host;
+    proxy_redirect off;
+
+    if (-f $request_filename) {
+      break;
+    }
+
+    proxy_pass http://web;
+  }
+}
